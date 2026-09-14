@@ -1,28 +1,9 @@
-import os
-import sys
-import subprocess
-
-# ========================================================
-# INSTALACIÓN INMEDIATA Y FORZADA (Antes de cualquier import)
-# ========================================================
-def instalar_herramientas_urgente():
-    # Obligamos al servidor de Streamlit a instalar todo en este segundo
-    try:
-        import yfinance
-        import pandas
-        import numpy
-    except ImportError:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "yfinance", "pandas", "openpyxl", "lxml"])
-
-# Ejecutamos la instalación antes de que Streamlit intente hacer nada más
-instalar_herramientas_urgente()
-
-# Ahora que ya se instaló todo a la fuerza, podemos importar Streamlit y lo demás de forma segura
 import streamlit as st
 import pandas as pd
 import numpy as np
+import yfinance as yf
 
-# Configuración visual de la aplicación web
+# Configuración de la página web
 st.set_page_config(page_title="Monitor Merval", page_icon="📊", layout="wide")
 
 st.title("📊 Monitor Inteligente S&P Merval")
@@ -37,9 +18,6 @@ if st.button("🔄 Actualizar Datos del Día"):
 # --- MOTOR DE DATOS EN VIVO ---
 @st.cache_data(ttl=3600)
 def cargar_todo_el_merval():
-    # Importamos yfinance acá adentro de forma oculta para que Streamlit no se trabe al inicio
-    import yfinance as yf
-    
     # Lista de empresas del panel local en pesos
     empresas = [
         "TGNO4.BA", "PAMP.BA", "AUSO.BA", "TGSU2.BA", "CEPU.BA", "YPFD.BA", 
@@ -71,7 +49,7 @@ def cargar_todo_el_merval():
         
     df = pd.DataFrame(datos_lista)
     
-    # Sistema de puntuación para el ranking (0 a 100)
+    # Sistema de scoring básico para el ranking
     for col in ["ROE (%)", "Margen Neto (%)", "Margen Operativo (%)", "PEG", "P/B (Precio/Libro)"]:
         if col in df.columns and df[col].max() != df[col].min():
             if col in ["PEG", "P/B (Precio/Libro)"]:
