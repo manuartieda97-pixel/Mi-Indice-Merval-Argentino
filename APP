@@ -1,0 +1,4 @@
+requirements.txt
+yfinance
+pandas
+lxml
