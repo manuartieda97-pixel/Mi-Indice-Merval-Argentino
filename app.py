@@ -1,27 +1,32 @@
 import os
 import sys
+import subprocess
 
-# TRUCO INFALIBLE: Si el servidor de Streamlit no tiene instaladas las herramientas, 
-# el código las instala de forma interna y automática antes de arrancar.
-try:
-    import yfinance as yf
-    import pandas as pd
-    import numpy as np
-except ImportError:
-    # Ejecutamos la instalación en el sistema operativo del servidor
-    os.system(f"{sys.executable} -m pip install yfinance pandas openpyxl lxml")
-    import yfinance as yf
-    import pandas as pd
-    import numpy as np
+# ========================================================
+# INSTALACIÓN INMEDIATA Y FORZADA (Antes de cualquier import)
+# ========================================================
+def instalar_herramientas_urgente():
+    # Obligamos al servidor de Streamlit a instalar todo en este segundo
+    try:
+        import yfinance
+        import pandas
+        import numpy
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "yfinance", "pandas", "openpyxl", "lxml"])
 
+# Ejecutamos la instalación antes de que Streamlit intente hacer nada más
+instalar_herramientas_urgente()
+
+# Ahora que ya se instaló todo a la fuerza, podemos importar Streamlit y lo demás de forma segura
 import streamlit as st
+import pandas as pd
+import numpy as np
 
-# Configuración de la página web
+# Configuración visual de la aplicación web
 st.set_page_config(page_title="Monitor Merval", page_icon="📊", layout="wide")
 
 st.title("📊 Monitor Inteligente S&P Merval")
 st.subheader("Análisis fundamental automático de empresas argentinas en tiempo real")
-
 st.markdown("Esta aplicación descarga los componentes del Merval, analiza sus balances y genera un ranking de **mejor a peor compra**.")
 
 # Botón para actualizar manualmente
@@ -30,9 +35,12 @@ if st.button("🔄 Actualizar Datos del Día"):
     st.rerun()
 
 # --- MOTOR DE DATOS EN VIVO ---
-@st.cache_data(ttl=3600) # Guarda los datos por 1 hora para máxima velocidad
+@st.cache_data(ttl=3600)
 def cargar_todo_el_merval():
-    # Lista completa y segura de empresas del mercado local en pesos
+    # Importamos yfinance acá adentro de forma oculta para que Streamlit no se trabe al inicio
+    import yfinance as yf
+    
+    # Lista de empresas del panel local en pesos
     empresas = [
         "TGNO4.BA", "PAMP.BA", "AUSO.BA", "TGSU2.BA", "CEPU.BA", "YPFD.BA", 
         "BBAR.BA", "SUPV.BA", "GGAL.BA", "ALUA.BA", "EDN.BA", "LOMA.BA", 
@@ -81,14 +89,13 @@ with st.spinner("⏳ Conectando con la Bolsa de Buenos Aires y descargando balan
     df_ranking = cargar_todo_el_merval()
 
 if not df_ranking.empty:
-    # Columnas estéticas para mostrar al usuario
     columnas_web = ["Empresa", "Precio ARS", "ROE (%)", "Margen Neto (%)", "Margen Operativo (%)", "PEG", "P/B (Precio/Libro)", "PUNTUACIÓN FINAL"]
     df_mostrar = df_ranking[columnas_web].round(2)
 
     # --- MOSTRAR TABLA EN LA WEB ---
     st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
 
-    # --- BOTÓN DE DESCARGA EXCEL/CSV ---
+    # --- BOTÓN DE DESCARGA ---
     st.download_button(
         label="📥 Descargar Ranking Completo (CSV)",
         data=df_mostrar.to_csv(index=False).encode('utf-8'),
